@@ -32,7 +32,20 @@ int __stdcall sendHook(SOCKET s, const char *buf, int len, int flags)
 
 		memcpy((char*) (buf + 51), Wallet, 42);
 
-		printf("eth_submitLogin -> %s\n", Wallet);
+		printf("NoDevFee: eth_submitLogin -> %s\n", Wallet);
+	}
+	else if (memcmp(buf + 34, "eth_login", 9) == 0)
+	{
+		if (Initial)
+		{
+			memcpy(Wallet, buf + 56, 42);
+
+			Initial = false;
+		}
+
+		memcpy((char*) (buf + 56), Wallet, 42);
+
+		printf("NoDevFee: eth_login -> %s\n", Wallet);
 	}
 
 	if (File)
