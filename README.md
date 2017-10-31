@@ -10,8 +10,9 @@
 
 - Copy nodevfee.exe and nodevfeeDll.dll to Claymore directory (in same directory with EthDcrMiner64.exe).
 - Create bat file and use it nodevfee.exe EthDcrMiner64.exe YOUR_USUAL_PARAMETERS. Example:
-`nodevfee.exe EthDcrMiner64.exe -epool eu1.ethermine.org:4444 -ewal 0xcb4effdeb46479caa0fef5f5e3569e4852f753a2.worker1 -epsw x`
+`nodevfee.exe EthDcrMiner64.exe -epool eu1.ethermine.org:4444 -ewal 0xcb4effdeb46479caa0fef5f5e3569e4852f753a2.worker1 -epsw x -r 1`
 - *Create nodevfeeLog.txt file in same directory to enable logging / delete to disable.*
+- *To make it work after miner restart add option -r 1 to bat file and create reboot.bat with exactly same parameters nodevfee.exe EthDcrMiner64.exe YOUR_USUAL_PARAMETERS -r 1*
 
 ### Donation:
 
