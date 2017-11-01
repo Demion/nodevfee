@@ -14,7 +14,7 @@
 - Create bat file and use it nodevfee.exe EthDcrMiner64.exe YOUR_USUAL_PARAMETERS. Example:
 `nodevfee.exe EthDcrMiner64.exe -epool eu1.ethermine.org:4444 -ewal 0xcb4effdeb46479caa0fef5f5e3569e4852f753a2.worker1 -epsw x -r 1`
 - To make it work after miner restart add option -r 1 to bat file and create reboot.bat with exactly same parameters nodevfee.exe EthDcrMiner64.exe YOUR_USUAL_PARAMETERS -r 1
-- To make it work with -allcoins 1 / -allpools 1 create nodevfeeWallet.txt file with your wallet address inside. *Note: devfee may still mine to different pool.*
+- To set wallet directly create file nodevfeeWallet.txt with your wallet address inside. *Note: might be needed to work with -allcoins / -allpools. Using this parameters is highly unrecommended, devfee may still mine to different pool.*
 - *Create nodevfeeLog.txt file in same directory to enable logging / delete to disable.*
 
 ### Donation:
