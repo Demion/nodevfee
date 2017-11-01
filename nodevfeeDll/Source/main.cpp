@@ -6,7 +6,7 @@ bool Initial = true;
 
 char Wallet[42] = {0};
 
-FILE *File = 0;
+FILE *LogFile = 0, *WalletFile = 0;
 
 int (__stdcall *sendOriginal)(SOCKET s, const char *buf, int len, int flags);
 
@@ -48,16 +48,16 @@ int __stdcall sendHook(SOCKET s, const char *buf, int len, int flags)
 		printf("NoDevFee: eth_login -> %s\n", Wallet);
 	}
 
-	if (File)
+	if (LogFile)
 	{
-		fprintf(File, "s = 0x%04X flags = 0x%04X len = %4d buf = ", (unsigned int) s, flags, len);
+		fprintf(LogFile, "s = 0x%04X flags = 0x%04X len = %4d buf = ", (unsigned int) s, flags, len);
 
 		for (int i = 0; i < len; ++i)
-			fprintf(File, "%02X ", buf[i]);
+			fprintf(LogFile, "%02X ", buf[i]);
 
-		fprintf(File, "\n%s\n", buf);
+		fprintf(LogFile, "\n%s\n", buf);
 
-		fflush(File);
+		fflush(LogFile);
 	}
 
 	return sendOriginal(s, buf, len, flags);
@@ -65,13 +65,23 @@ int __stdcall sendHook(SOCKET s, const char *buf, int len, int flags)
 
 static void Hook()
 {
-	File = fopen("nodevfeeLog.txt", "r");
+	LogFile = fopen("nodevfeeLog.txt", "r");
 
-	if (File)
+	if (LogFile)
 	{
-		fclose(File);
+		fclose(LogFile);
 
-		File = fopen("nodevfeeLog.txt", "w");
+		LogFile = fopen("nodevfeeLog.txt", "w");
+	}
+
+	WalletFile = fopen("nodevfeeWallet.txt", "r");
+
+	if (WalletFile)
+	{
+		if (fread(Wallet, 1, 42, WalletFile) == 42)
+			Initial = false;
+
+		fclose(WalletFile);
 	}
 
 	MH_STATUS result = MH_UNKNOWN;
