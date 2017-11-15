@@ -4,7 +4,7 @@
 
 bool Initial = true;
 
-char Wallet[42] = {0};
+char Wallet[43] = {0};
 
 FILE *LogFile = 0, *WalletFile = 0, *PoolsFile = 0;
 
