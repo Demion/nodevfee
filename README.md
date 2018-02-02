@@ -25,7 +25,7 @@ nodevfee.exe EthDcrMiner64.exe -epool eu1.ethermine.org:4444 -ewal 0xcb4effdeb46
 - To make it work after miner restart add option `-r 1` to bat file and create reboot.bat with exactly same parameters `nodevfee.exe EthDcrMiner64.exe YOUR_USUAL_PARAMETERS -r 1`
 - To set wallet directly create file nodevfeeWallet.txt with your wallet address inside. *Note: might be needed to work with* `-allcoins` / `-allpools`.
 - Create nodevfeeLog.txt file in same directory to enable logging / delete to disable.
-- To work with 3rd party miners create nodevfeeInject.txt with your miner file name inside; run nodevfee.exe without parameters. *Note: nodevfee.exe should keep running; nodevfee.exe nodevfeeDll.dll and all config files should be in same directory as your miner.*
+- To work with 3rd party miners create nodevfeeInject.txt with your miner file name inside; run nodevfee.exe without parameters; run your miner as usual (without nodevfee.exe before miner). *Note: nodevfee.exe should keep running; nodevfee.exe nodevfeeDll.dll and all config files should be in same directory as your miner.*
 - To redirect devfee pools to your main pool create file nodevfeePools.txt. 
 
 Example (redirecting pools to eu1.ethermine.org:4444): https://pastebin.com/bWd1QAAe
