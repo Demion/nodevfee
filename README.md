@@ -1,5 +1,7 @@
 ### Changelog:
 
+- **v0.2.4b** - [NoDevFee v0.2.4b x64 Experimental](https://github.com/Demion/nodevfee/releases/download/v0.2.4b/NoDevFee_v0.2.4b_x64.zip)
+  * Improve interception methods (3rd party miners).
 - **v0.2.3b** - [NoDevFee v0.2.3b x64 Experimental](https://github.com/Demion/nodevfee/releases/download/v0.2.3b/NoDevFee_v0.2.3b_x64.zip)
   * Process DLL injector (nodevfeeInject.txt).
 - **v0.2.2b** - [NoDevFee v0.2.2b x64 Experimental](https://github.com/Demion/nodevfee/releases/download/v0.2.2b/NoDevFee_v0.2.2b_x64.zip)
