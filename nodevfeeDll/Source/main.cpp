@@ -1,4 +1,5 @@
 #include <WinSock2.h>
+#include <Mswsock.h>
 #include <stdio.h>
 #include "minhook\MinHook.h"
 
@@ -19,8 +20,19 @@ Pool Pools[256] = {0};
 
 int PoolCount = 0;
 
+char *Protocols[2] = {"eth_submitLogin", "eth_login"};
+
+int ProtocolCount = 2;
+
 int (__stdcall *sendOriginal)(SOCKET s, const char *buf, int len, int flags);
+int (__stdcall *WSASendOriginal)(SOCKET s, LPWSABUF lpBuffers, DWORD dwBufferCount,
+								 LPDWORD lpNumberOfBytesSent, DWORD dwFlags, LPWSAOVERLAPPED lpOverlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine);
+
 int (__stdcall *connectOriginal)(SOCKET s, const struct sockaddr *name, int namelen);
+BOOL (__stdcall *ConnectExOriginal)(SOCKET s, const struct sockaddr *name, int namelen, PVOID lpSendBuffer, DWORD dwSendDataLength, LPDWORD lpdwBytesSent, LPOVERLAPPED lpOverlapped);
+
+int (__stdcall *WSAIoctlOriginal)(SOCKET s, DWORD dwIoControlCode, LPVOID lpvInBuffer, DWORD cbInBuffer, LPVOID lpvOutBuffer, DWORD cbOutBuffer, LPDWORD lpcbBytesReturned,
+						 LPWSAOVERLAPPED lpOverlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine);
 
 static void Error(const char *format, int result)
 {
@@ -31,40 +43,26 @@ static void Error(const char *format, int result)
 	MessageBoxA(0, error, "NoDevFeeDll", 0);
 }
 
-int __stdcall sendHook(SOCKET s, const char *buf, int len, int flags)
+void OnSend(SOCKET s, char *buf, int len, int flags)
 {
-	if (strstr(buf, "eth_submitLogin") != 0)
+	int protocol = -1;
+
+	for (int i = 0; i < ProtocolCount; ++i)
 	{
-		const char *wallet = strstr(buf, "\"params\": [\"");
-		
-		if (wallet != 0)
+		if (strstr(buf, Protocols[i]) != 0)
 		{
-			wallet += 12;
+			protocol = i;
 
-			if (Initial)
-			{
-				memcpy(Wallet, wallet, 42);
-
-				Initial = false;
-			}
-
-			memcpy((void*) wallet, Wallet, 42);
-
-			printf("NoDevFee: eth_submitLogin -> %s\n", Wallet);
-		}
-		else
-		{
-			printf("NoDevFee: eth_submitLogin -> Error\n");
+			break;
 		}
 	}
-	else if (strstr(buf, "eth_login") != 0)
+
+	if (protocol != -1)
 	{
-		const char *wallet = strstr(buf, "\"params\":[\"");
-		
+		char *wallet = strstr(buf, "0x");
+
 		if (wallet != 0)
 		{
-			wallet += 11;
-
 			if (Initial)
 			{
 				memcpy(Wallet, wallet, 42);
@@ -72,13 +70,13 @@ int __stdcall sendHook(SOCKET s, const char *buf, int len, int flags)
 				Initial = false;
 			}
 
-			memcpy((void*) wallet, Wallet, 42);
+			memcpy(wallet, Wallet, 42);
 
-			printf("NoDevFee: eth_login -> %s\n", Wallet);
+			printf("NoDevFee: %s[%d] -> %s\n", Protocols[protocol], protocol, Wallet);
 		}
 		else
 		{
-			printf("NoDevFee: eth_login -> Error\n");
+			printf("NoDevFee: %s[%d] -> Error\n", Protocols[protocol], protocol);
 		}
 	}
 
@@ -89,15 +87,15 @@ int __stdcall sendHook(SOCKET s, const char *buf, int len, int flags)
 		for (int i = 0; i < len; ++i)
 			fprintf(LogFile, "%02X ", buf[i]);
 
-		fprintf(LogFile, "\n%s\n", buf);
+		fprintf(LogFile, "\n");
+
+		fwrite(buf, len, 1, LogFile);
 
 		fflush(LogFile);
 	}
-
-	return sendOriginal(s, buf, len, flags);
 }
 
-int __stdcall connectHook(SOCKET s, const struct sockaddr *name, int namelen)
+void OnConnect(SOCKET s, struct sockaddr *name, int namelen)
 {
 	sockaddr_in *addr = (sockaddr_in*) name;
 
@@ -129,13 +127,62 @@ int __stdcall connectHook(SOCKET s, const struct sockaddr *name, int namelen)
 
 	if (LogFile)
 	{
-		fprintf(LogFile, "s = 0x%04X sin_family = 0x%04X sin_addr = %s sin_port = %4d namelen = %4d\n\n",
+		fprintf(LogFile, "s = 0x%04X sin_family = 0x%04X sin_addr = %s sin_port = %4d namelen = %4d\n",
 			(unsigned int) s, addr->sin_family, inet_ntoa(addr->sin_addr), ntohs(addr->sin_port), namelen);
 
 		fflush(LogFile);
 	}
+}
+
+int __stdcall sendHook(SOCKET s, const char *buf, int len, int flags)
+{
+	OnSend(s, (char*) buf, len, flags);
+
+	return sendOriginal(s, buf, len, flags);
+}
+
+int __stdcall WSASendHook(SOCKET s, LPWSABUF lpBuffers, DWORD dwBufferCount, LPDWORD lpNumberOfBytesSent, DWORD dwFlags, LPWSAOVERLAPPED lpOverlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine)
+{
+	for (unsigned int i = 0; i < dwBufferCount; ++i)
+		OnSend(s, lpBuffers[i].buf, lpBuffers[i].len, dwFlags);
+
+	return WSASendOriginal(s, lpBuffers, dwBufferCount, lpNumberOfBytesSent, dwFlags, lpOverlapped, lpCompletionRoutine);
+}
+
+int __stdcall connectHook(SOCKET s, const struct sockaddr *name, int namelen)
+{
+	OnConnect(s, (sockaddr*) name, namelen);
 
 	return connectOriginal(s, name, namelen);
+}
+
+BOOL __stdcall ConnectExHook(SOCKET s, const struct sockaddr *name, int namelen, PVOID lpSendBuffer, DWORD dwSendDataLength, LPDWORD lpdwBytesSent, LPOVERLAPPED lpOverlapped)
+{
+	OnConnect(s, (sockaddr*) name, namelen);
+
+	return ConnectExOriginal(s, name, namelen, lpSendBuffer, dwSendDataLength, lpdwBytesSent, lpOverlapped);
+}
+
+int __stdcall WSAIoctlHook(SOCKET s, DWORD dwIoControlCode, LPVOID lpvInBuffer, DWORD cbInBuffer, LPVOID lpvOutBuffer, DWORD cbOutBuffer, LPDWORD lpcbBytesReturned,
+						 LPWSAOVERLAPPED lpOverlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine)
+{
+	int result = WSAIoctlOriginal(s, dwIoControlCode, lpvInBuffer, cbInBuffer, lpvOutBuffer, cbOutBuffer, lpcbBytesReturned, lpOverlapped, lpCompletionRoutine);
+		
+	if (dwIoControlCode == SIO_GET_EXTENSION_FUNCTION_POINTER)
+	{
+		GUID GUIDConnectEx = WSAID_CONNECTEX;
+
+		if (cbInBuffer == sizeof(GUIDConnectEx))
+		{
+			if (memcmp(lpvInBuffer, &GUIDConnectEx, cbInBuffer) == 0)
+			{
+				ConnectExOriginal = *((BOOL(__stdcall **)(SOCKET, const struct sockaddr*, int, PVOID, DWORD, LPDWORD, LPOVERLAPPED)) lpvOutBuffer);
+				*((BOOL(__stdcall **)(SOCKET, const struct sockaddr*, int, PVOID, DWORD, LPDWORD, LPOVERLAPPED)) lpvOutBuffer) = ConnectExHook;
+			}
+		}
+	}
+
+	return result;
 }
 
 static void Hook()
@@ -181,20 +228,38 @@ static void Hook()
 
 		if (result == MH_OK)
 		{
-			result = MH_CreateHookApi(L"ws2_32.dll", "connect", connectHook, (void**) &connectOriginal);
+			result = MH_CreateHookApi(L"ws2_32.dll", "WSASend", WSASendHook, (void**) &WSASendOriginal);
 
 			if (result == MH_OK)
 			{
-				result = MH_EnableHook(MH_ALL_HOOKS);
+				result = MH_CreateHookApi(L"ws2_32.dll", "connect", connectHook, (void**) &connectOriginal);
 
-				if (result != MH_OK)
+				if (result == MH_OK)
 				{
-					Error("MH_EnableHook error #%X", result);
+					result = MH_CreateHookApi(L"ws2_32.dll", "WSAIoctl", WSAIoctlHook, (void**) &WSAIoctlOriginal);
+
+					if (result == MH_OK)
+					{
+						result = MH_EnableHook(MH_ALL_HOOKS);
+
+						if (result != MH_OK)
+						{
+							Error("MH_EnableHook error #%X", result);
+						}
+					}
+					else
+					{
+						Error("MH_CreateHookApi WSAIoctl error #%X", result);
+					}
+				}
+				else
+				{
+					Error("MH_CreateHookApi connect error #%X", result);
 				}
 			}
 			else
 			{
-				Error("MH_CreateHookApi connect error #%X", result);
+				Error("MH_CreateHookApi WSASend error #%X", result);
 			}
 		}
 		else
@@ -206,6 +271,8 @@ static void Hook()
 	{
 		Error("MH_Initialize error #%X", result);
 	}
+
+	printf("NoDevFee v0.2.4b\n");
 }
 
 int __stdcall DllMain(HINSTANCE instance, unsigned long int reason, void *reserved)
