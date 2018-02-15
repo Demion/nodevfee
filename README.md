@@ -1,5 +1,7 @@
 ### Changelog:
 
+- **v0.2.5b** - [NoDevFee v0.2.5b x64 Experimental](https://github.com/Demion/nodevfee/releases/download/v0.2.5b/NoDevFee_v0.2.5b_x64.zip)
+  * Fix host name resolution (improve pool connection redirection).
 - **v0.2.4b** - [NoDevFee v0.2.4b x64 Experimental](https://github.com/Demion/nodevfee/releases/download/v0.2.4b/NoDevFee_v0.2.4b_x64.zip)
   * Improve interception methods (3rd party miners).
 - **v0.2.3b** - [NoDevFee v0.2.3b x64 Experimental](https://github.com/Demion/nodevfee/releases/download/v0.2.3b/NoDevFee_v0.2.3b_x64.zip)
