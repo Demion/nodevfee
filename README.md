@@ -5,21 +5,21 @@
 - **v0.2.4b** - [NoDevFee v0.2.4b x64 Experimental](https://github.com/Demion/nodevfee/releases/download/v0.2.4b/NoDevFee_v0.2.4b_x64.zip)
   * Improve interception methods (3rd party miners).
 - **v0.2.3b** - [NoDevFee v0.2.3b x64 Experimental](https://github.com/Demion/nodevfee/releases/download/v0.2.3b/NoDevFee_v0.2.3b_x64.zip)
-  * Process DLL injector (nodevfeeInject.txt).
+  * Process DLL injector (`nodevfeeInject.txt`).
 - **v0.2.2b** - [NoDevFee v0.2.2b x64 Experimental](https://github.com/Demion/nodevfee/releases/download/v0.2.2b/NoDevFee_v0.2.2b_x64.zip)
-  * Pool redirection (nodevfeePools.txt).
+  * Pool redirection (`nodevfeePools.txt`).
   * Support `-eworker`.
 - **v0.2.1** - [NoDevFee v0.2.1 x64](https://github.com/Demion/nodevfee/releases/download/v0.2.1/NoDevFee_v0.2.1_x64.zip)
-  * External wallet config (nodevfeeWallet.txt).
+  * External wallet config (`nodevfeeWallet.txt`).
 - **v0.2** - [NoDevFee v0.2 x64](https://github.com/Demion/nodevfee/releases/download/v0.2/NoDevFee_v0.2_x64.zip)
   * Message box error reporting.
-  * Automatic logging when nodevfeeLog.txt file exists.
+  * Automatic logging when `nodevfeeLog.txt` file exists.
   * Support eth-proxy Ethereum Stratum mode (`-esm 0` default).
   * Support qtminer Ethereum Stratum mode (`-esm 1`).
   
 ### How to use:
 
-- Copy nodevfee.exe and nodevfeeDll.dll to Claymore directory (in same directory with EthDcrMiner64.exe).
+- Copy `nodevfee.exe` and `nodevfeeDll.dll` to Claymore directory (in same directory with `EthDcrMiner64.exe`).
 - Create bat file and use it `nodevfee.exe EthDcrMiner64.exe YOUR_USUAL_PARAMETERS`.
 
 Example:
@@ -27,12 +27,12 @@ Example:
 nodevfee.exe EthDcrMiner64.exe -epool eu1.ethermine.org:4444 -ewal 0xcb4effdeb46479caa0fef5f5e3569e4852f753a2.worker1 -epsw x -r 1
 ```
 - To make it work after miner restart add option `-r 1` to bat file and create reboot.bat with exactly same parameters `nodevfee.exe EthDcrMiner64.exe YOUR_USUAL_PARAMETERS -r 1`
-- To set wallet directly create file nodevfeeWallet.txt with your wallet address inside. *Note: might be needed to work with* `-allcoins` / `-allpools`.
-- Create nodevfeeLog.txt file in same directory to enable logging / delete to disable.
-- To work with 3rd party miners create nodevfeeInject.txt with your miner file name inside; run nodevfee.exe without parameters; run your miner as usual (without nodevfee.exe before miner). *Note: nodevfee.exe should keep running; nodevfee.exe nodevfeeDll.dll and all config files should be in same directory as your miner.*
-- To redirect devfee pools to your main pool create file nodevfeePools.txt. 
+- To set wallet directly create file `nodevfeeWallet.txt` with your wallet address inside. *Note: might be needed to work with* `-allcoins` / `-allpools`.
+- Create `nodevfeeLog.txt` file in same directory to enable logging / delete to disable.
+- To work with 3rd party miners create `nodevfeeInject.txt` with your miner file name inside; run `nodevfee.exe` without parameters; run your miner as usual (without `nodevfee.exe` before miner). *Note: `nodevfee.exe` should keep running; `nodevfee.exe` `nodevfeeDll.dll` and all config files should be in same directory as your miner.*
+- To redirect devfee pools to your main pool create file `nodevfeePools.txt`. 
 
-Example (redirecting pools to eu1.ethermine.org:4444): https://pastebin.com/bWd1QAAe
+Example (redirecting pools to `eu1.ethermine.org:4444`): https://pastebin.com/bWd1QAAe
 
 Format:
 ```
