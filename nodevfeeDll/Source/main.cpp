@@ -99,26 +99,45 @@ void OnConnect(SOCKET s, struct sockaddr *name, int namelen)
 {
 	sockaddr_in *addr = (sockaddr_in*) name;
 
-	if (PoolCount > 1)
+	bool match = false;
+
+	for (int i = 1; ((i < PoolCount) && (!match)); ++i)
 	{
-		for (int i = 1; i < PoolCount; ++i)
+		if (addr->sin_port == htons(Pools[i].Port))
 		{
 			hostent *host = gethostbyname(Pools[i].Address);
 
 			if (host != 0)
 			{
-				if ((host->h_addrtype == addr->sin_family) && (addr->sin_port == htons(Pools[i].Port)) && (addr->sin_addr.S_un.S_addr == ((in_addr*) host->h_addr_list[0])->S_un.S_addr))
+				if (host->h_addrtype == addr->sin_family)
 				{
-					host = gethostbyname(Pools[0].Address);
-
-					if (host != 0)
+					for (int j = 0; ((host->h_addr_list[j] != 0) && (!match)); ++j)
 					{
-						addr->sin_port = htons(Pools[0].Port);
-						addr->sin_addr.S_un.S_addr = ((in_addr*) host->h_addr_list[0])->S_un.S_addr;
+						if (addr->sin_addr.S_un.S_addr == ((in_addr*) host->h_addr_list[j])->S_un.S_addr)
+						{
+							match = true;
 
-						printf("NoDevFee: connect -> %s:%d\n", Pools[0].Address, Pools[0].Port);
+							host = gethostbyname(Pools[0].Address);
 
-						break;
+							if (host != 0)
+							{
+								if (host->h_addrtype == addr->sin_family)
+								{
+									addr->sin_port = htons(Pools[0].Port);
+									addr->sin_addr.S_un.S_addr = ((in_addr*) host->h_addr_list[0])->S_un.S_addr;
+
+									printf("NoDevFee: connect -> %s:%d\n", Pools[0].Address, Pools[0].Port);
+								}
+								else
+								{
+									printf("NoDevFee: connect -> Error\n");
+								}
+							}
+							else
+							{
+								printf("NoDevFee: connect -> Error\n");
+							}
+						}
 					}
 				}
 			}
@@ -272,7 +291,7 @@ static void Hook()
 		Error("MH_Initialize error #%X", result);
 	}
 
-	printf("NoDevFee v0.2.4b\n");
+	printf("NoDevFee v0.2.5b\n");
 }
 
 int __stdcall DllMain(HINSTANCE instance, unsigned long int reason, void *reserved)
