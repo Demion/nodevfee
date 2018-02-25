@@ -2,13 +2,15 @@
 #include <TlHelp32.h>
 #include <stdio.h>
 
-static void Error(const char *format, int result)
+wchar_t Name[MAX_PATH + 1] = {0};
+
+static void Error(const wchar_t *format, int result)
 {
-	char error[1024] = {0};
+	wchar_t error[1024] = {0};
 
-	sprintf(error, format, result);
+	_swprintf(error, format, result);
 
-	MessageBoxA(0, error, "NoDevFee", 0);
+	MessageBoxW(0, error, Name, 0);
 }
 
 static void InjectDll(HANDLE process, const wchar_t *dllName)
@@ -41,17 +43,17 @@ static void InjectDll(HANDLE process, const wchar_t *dllName)
 							{
 								if (exitCode == 0)
 								{
-									Error("LoadLibraryW error #%X", GetLastError());
+									Error(L"LoadLibraryW error #%X", GetLastError());
 								}
 							}
 							else
 							{
-								Error("GetExitCodeThread error #%X", GetLastError());
+								Error(L"GetExitCodeThread error #%X", GetLastError());
 							}
 						}
 						else
 						{
-							Error("WaitForSingleObject error #%X", GetLastError());
+							Error(L"WaitForSingleObject error #%X", GetLastError());
 						}
 
 						VirtualFreeEx(process, remoteString, 0, MEM_RELEASE);
@@ -60,32 +62,65 @@ static void InjectDll(HANDLE process, const wchar_t *dllName)
 					}
 					else
 					{
-						Error("CreateRemoteThread error #%X", GetLastError());
+						Error(L"CreateRemoteThread error #%X", GetLastError());
 					}
 				}
 				else
 				{
-					Error("WriteProcessMemory error #%X", GetLastError());
+					Error(L"WriteProcessMemory error #%X", GetLastError());
 				}
 			}
 			else
 			{
-				Error("VirtualAllocEx error #%X", GetLastError());
+				Error(L"VirtualAllocEx error #%X", GetLastError());
 			}
 		}
 		else
 		{
-			Error("GetProcAddress error #%X", GetLastError());
+			Error(L"GetProcAddress error #%X", GetLastError());
 		}
 	}
 	else
 	{
-		Error("GetModuleHandleW error #%X", GetLastError());
+		Error(L"GetModuleHandleW error #%X", GetLastError());
 	}
+}
+
+static void GetName(const wchar_t *path)
+{
+	int length = (int) wcslen(path);
+
+	for (int i = length - 1; i >= 0; --i)
+	{
+		if ((path[i] == '/') || (path[i] == '\\'))
+		{
+			wcscpy(Name, path + i + 1);
+
+			break;
+		}
+	}
+
+	if (wcslen(Name) == 0)
+		wcscpy(Name, path);
+
+	Name[wcslen(Name) - 4] = 0;
+}
+
+static void SetFileName(wchar_t *fileName, const wchar_t *postfix)
+{
+	wcscpy(fileName, Name);
+
+	wcscat(fileName, postfix);
 }
 
 int wmain(int argc, wchar_t *argv[])
 {
+	GetName(argv[0]);
+
+	wchar_t dllFileName[MAX_PATH + 1] = {0};
+
+	SetFileName(dllFileName, L".dll");
+
 	if (argc > 1)
 	{
 		STARTUPINFO si = {0};
@@ -94,13 +129,17 @@ int wmain(int argc, wchar_t *argv[])
 
 		PROCESS_INFORMATION pi = {0};
 
-		if (CreateProcessW(0, wcsstr(GetCommandLineW(), argv[1]), 0, 0, false, CREATE_SUSPENDED | REALTIME_PRIORITY_CLASS, 0, 0, &si, &pi) != 0)
+		int flags = CREATE_SUSPENDED;
+
+		//flags |= REALTIME_PRIORITY_CLASS;
+
+		if (CreateProcessW(0, wcsstr(GetCommandLineW(), argv[1]), 0, 0, false, flags, 0, 0, &si, &pi) != 0)
 		{
-			InjectDll(pi.hProcess, L"nodevfeeDll.dll");
+			InjectDll(pi.hProcess, dllFileName);
 
 			if (ResumeThread(pi.hThread) == -1)
 			{
-				Error("ResumeThread error #%X", GetLastError());
+				Error(L"ResumeThread error #%X", GetLastError());
 			}
 
 			CloseHandle(pi.hThread);
@@ -108,16 +147,22 @@ int wmain(int argc, wchar_t *argv[])
 		}
 		else
 		{
-			Error("CreateProcessW error #%X", GetLastError());
+			Error(L"CreateProcessW error #%X", GetLastError());
 		}
 	}
 	else
 	{
-		FILE *injectFile = fopen("nodevfeeInject.txt", "r");
+		wchar_t injectFileName[MAX_PATH + 1] = {0};
+
+		SetFileName(injectFileName, L"Inject.txt");
+
+		FILE *injectFile = _wfopen(injectFileName, L"r");
 
 		if (injectFile)
 		{
-			wchar_t processName[256] = {0};
+			//ShowWindow(GetConsoleWindow(), SW_HIDE);
+
+			wchar_t processName[MAX_PATH + 1] = {0};
 
 			fscanf(injectFile, "%ls", processName);
 
@@ -155,7 +200,7 @@ int wmain(int argc, wchar_t *argv[])
 										{
 											do
 											{
-												if (wcscmp(moduleEntry.szModule, L"nodevfeeDll.dll") == 0)
+												if (wcscmp(moduleEntry.szModule, dllFileName) == 0)
 												{
 													injected = true;
 
@@ -166,7 +211,7 @@ int wmain(int argc, wchar_t *argv[])
 										}
 										else
 										{
-											Error("Module32FirstW error #%X", GetLastError());
+											Error(L"Module32FirstW error #%X", GetLastError());
 										}
 
 										if (!injected)
@@ -176,15 +221,15 @@ int wmain(int argc, wchar_t *argv[])
 
 											if (process != 0)
 											{
-												InjectDll(process, L"nodevfeeDll.dll");
+												InjectDll(process, dllFileName);
 
-												printf("\"%ls\" [%d] -> \"%ls\"\n", processName, processEntry.th32ProcessID, L"nodevfeeDll.dll");
+												printf("\"%ls\" [%d] -> \"%ls\"\n", processName, processEntry.th32ProcessID, dllFileName);
 
 												CloseHandle(process);
 											}
 											else
 											{
-												Error("OpenProcess error #%X", GetLastError());
+												Error(L"OpenProcess error #%X", GetLastError());
 											}
 										}
 
@@ -192,7 +237,7 @@ int wmain(int argc, wchar_t *argv[])
 									}
 									else
 									{
-										Error("CreateToolhelp32Snapshot error #%X", GetLastError());
+										Error(L"CreateToolhelp32Snapshot error #%X", GetLastError());
 									}
 								}
 							}
@@ -200,14 +245,14 @@ int wmain(int argc, wchar_t *argv[])
 						}
 						else
 						{
-							Error("Process32FirstW error #%X", GetLastError());
+							Error(L"Process32FirstW error #%X", GetLastError());
 						}
 
 						CloseHandle(processSnapshot);
 					}
 					else
 					{
-						Error("CreateToolhelp32Snapshot error #%X", GetLastError());
+						Error(L"CreateToolhelp32Snapshot error #%X", GetLastError());
 					}
 
 					Sleep(1000);

@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include "minhook\MinHook.h"
 
+wchar_t Name[MAX_PATH + 1] = {0};
+
 bool Initial = true;
 
 char Wallet[43] = {0};
@@ -38,13 +40,13 @@ BOOL (__stdcall *ConnectExOriginal)(SOCKET s, const struct sockaddr *name, int n
 int (__stdcall *WSAIoctlOriginal)(SOCKET s, DWORD dwIoControlCode, LPVOID lpvInBuffer, DWORD cbInBuffer, LPVOID lpvOutBuffer, DWORD cbOutBuffer, LPDWORD lpcbBytesReturned,
 						 LPWSAOVERLAPPED lpOverlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine);
 
-static void Error(const char *format, int result)
+static void Error(const wchar_t *format, int result)
 {
-	char error[1024] = {0};
+	wchar_t error[1024] = {0};
 
-	sprintf(error, format, result);
+	_swprintf(error, format, result);
 
-	MessageBoxA(0, error, "NoDevFeeDll", 0);
+	MessageBoxW(0, error, Name, 0);
 }
 
 void OnSend(SOCKET s, const char *buffer, int len, int flags, int index)
@@ -82,11 +84,11 @@ void OnSend(SOCKET s, const char *buffer, int len, int flags, int index)
 
 			memcpy(wallet, Wallet, 42);
 
-			printf("NoDevFee: %s[%d] -> %s\n", Protocols[protocol], protocol, Wallet);
+			printf("%ls: %s[%d] -> %s\n", Name, Protocols[protocol], protocol, Wallet);
 		}
 		else
 		{
-			printf("NoDevFee: %s[%d] -> Error\n", Protocols[protocol], protocol);
+			printf("%ls: %s[%d] -> Error\n", Name, Protocols[protocol], protocol);
 		}
 	}
 
@@ -138,16 +140,16 @@ void OnConnect(SOCKET s, const struct sockaddr *name, int namelen)
 									addr->sin_port = htons(Pools[0].Port);
 									addr->sin_addr.S_un.S_addr = ((in_addr*) host->h_addr_list[0])->S_un.S_addr;
 
-									printf("NoDevFee: connect -> %s:%d\n", Pools[0].Address, Pools[0].Port);
+									printf("%ls: connect -> %s:%d\n", Name, Pools[0].Address, Pools[0].Port);
 								}
 								else
 								{
-									printf("NoDevFee: connect -> Error\n");
+									printf("%ls: connect -> Error\n", Name);
 								}
 							}
 							else
 							{
-								printf("NoDevFee: connect -> Error\n");
+								printf("%ls: connect -> Error\n", Name);
 							}
 						}
 					}
@@ -216,8 +218,46 @@ int __stdcall WSAIoctlHook(SOCKET s, DWORD dwIoControlCode, LPVOID lpvInBuffer, 
 	return result;
 }
 
-static void Hook()
+static void GetName(HINSTANCE instance)
 {
+	wchar_t path[MAX_PATH + 1] = {0};
+
+	if (GetModuleFileNameW(instance, path, MAX_PATH) != 0)
+	{
+		int length = (int) wcslen(path);
+
+		for (int i = length - 1; i >= 0; --i)
+		{
+			if ((path[i] == '/') || (path[i] == '\\'))
+			{
+				wcscpy(Name, path + i + 1);
+
+				break;
+			}
+		}
+
+		if (wcslen(Name) == 0)
+			wcscpy(Name, path);
+
+		Name[wcslen(Name) - 4] = 0;
+	}
+	else
+	{
+		Error(L"GetModuleFileNameW error #%X", GetLastError());
+	}
+}
+
+static void SetFileName(wchar_t *fileName, const wchar_t *postfix)
+{
+	wcscpy(fileName, Name);
+
+	wcscat(fileName, postfix);
+}
+
+static void Hook(HINSTANCE instance)
+{
+	GetName(instance);
+
 	int bufferCount = 100, bufferSize = 10240;
 
 	Buffers = (WSABUF*) malloc(sizeof(WSABUF) * bufferCount);
@@ -225,16 +265,24 @@ static void Hook()
 	for (int i = 0; i < bufferCount; ++i)
 		Buffers[i].buf = (char*) malloc(bufferSize);
 
-	LogFile = fopen("nodevfeeLog.txt", "r");
+	wchar_t logFileName[MAX_PATH + 1] = {0};
+
+	SetFileName(logFileName, L"Log.txt");
+
+	LogFile = _wfopen(logFileName, L"r");
 
 	if (LogFile)
 	{
 		fclose(LogFile);
 
-		LogFile = fopen("nodevfeeLog.txt", "w");
+		LogFile = _wfopen(logFileName, L"w");
 	}
 
-	WalletFile = fopen("nodevfeeWallet.txt", "r");
+	wchar_t walletFileName[MAX_PATH + 1] = {0};
+
+	SetFileName(walletFileName, L"Wallet.txt");
+
+	WalletFile = _wfopen(walletFileName, L"r");
 
 	if (WalletFile)
 	{
@@ -244,7 +292,11 @@ static void Hook()
 		fclose(WalletFile);
 	}
 
-	PoolsFile = fopen("nodevfeePools.txt", "r");
+	wchar_t poolsFileName[MAX_PATH + 1] = {0};
+
+	SetFileName(poolsFileName, L"Pools.txt");
+
+	PoolsFile = _wfopen(poolsFileName, L"r");
 
 	if (PoolsFile)
 	{
@@ -282,35 +334,35 @@ static void Hook()
 
 						if (result != MH_OK)
 						{
-							Error("MH_EnableHook error #%X", result);
+							Error(L"MH_EnableHook error #%X", result);
 						}
 					}
 					else
 					{
-						Error("MH_CreateHookApi WSAIoctl error #%X", result);
+						Error(L"MH_CreateHookApi WSAIoctl error #%X", result);
 					}
 				}
 				else
 				{
-					Error("MH_CreateHookApi connect error #%X", result);
+					Error(L"MH_CreateHookApi connect error #%X", result);
 				}
 			}
 			else
 			{
-				Error("MH_CreateHookApi WSASend error #%X", result);
+				Error(L"MH_CreateHookApi WSASend error #%X", result);
 			}
 		}
 		else
 		{
-			Error("MH_CreateHookApi send error #%X", result);
+			Error(L"MH_CreateHookApi send error #%X", result);
 		}
 	}
 	else
 	{
-		Error("MH_Initialize error #%X", result);
+		Error(L"MH_Initialize error #%X", result);
 	}
 
-	printf("NoDevFee v0.2.5b\n");
+	printf("%ls v0.2.6b\n", Name);
 }
 
 int __stdcall DllMain(HINSTANCE instance, unsigned long int reason, void *reserved)
@@ -323,7 +375,7 @@ int __stdcall DllMain(HINSTANCE instance, unsigned long int reason, void *reserv
 
 		case DLL_PROCESS_ATTACH:
 
-			Hook();
+			Hook(instance);
 
 			break;
 
