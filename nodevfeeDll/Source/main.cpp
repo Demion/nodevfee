@@ -7,6 +7,10 @@ bool Initial = true;
 
 char Wallet[43] = {0};
 
+WSABUF *Buffers = 0;
+
+sockaddr Address = {0};
+
 FILE *LogFile = 0, *WalletFile = 0, *PoolsFile = 0;
 
 struct Pool
@@ -43,8 +47,14 @@ static void Error(const char *format, int result)
 	MessageBoxA(0, error, "NoDevFeeDll", 0);
 }
 
-void OnSend(SOCKET s, char *buf, int len, int flags)
+void OnSend(SOCKET s, const char *buffer, int len, int flags, int index)
 {
+	memcpy(Buffers[index].buf, buffer, len);
+	Buffers[index].len = len;
+	Buffers[index].buf[len] = 0;
+
+	char *buf = Buffers[index].buf;
+
 	int protocol = -1;
 
 	for (int i = 0; i < ProtocolCount; ++i)
@@ -95,9 +105,11 @@ void OnSend(SOCKET s, char *buf, int len, int flags)
 	}
 }
 
-void OnConnect(SOCKET s, struct sockaddr *name, int namelen)
+void OnConnect(SOCKET s, const struct sockaddr *name, int namelen)
 {
-	sockaddr_in *addr = (sockaddr_in*) name;
+	memcpy(&Address, name, namelen);
+
+	sockaddr_in *addr = (sockaddr_in*) &Address;
 
 	bool match = false;
 
@@ -155,31 +167,31 @@ void OnConnect(SOCKET s, struct sockaddr *name, int namelen)
 
 int __stdcall sendHook(SOCKET s, const char *buf, int len, int flags)
 {
-	OnSend(s, (char*) buf, len, flags);
+	OnSend(s, buf, len, flags, 0);
 
-	return sendOriginal(s, buf, len, flags);
+	return sendOriginal(s, Buffers[0].buf, len, flags);
 }
 
 int __stdcall WSASendHook(SOCKET s, LPWSABUF lpBuffers, DWORD dwBufferCount, LPDWORD lpNumberOfBytesSent, DWORD dwFlags, LPWSAOVERLAPPED lpOverlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine)
 {
 	for (unsigned int i = 0; i < dwBufferCount; ++i)
-		OnSend(s, lpBuffers[i].buf, lpBuffers[i].len, dwFlags);
+		OnSend(s, lpBuffers[i].buf, lpBuffers[i].len, dwFlags, i);
 
-	return WSASendOriginal(s, lpBuffers, dwBufferCount, lpNumberOfBytesSent, dwFlags, lpOverlapped, lpCompletionRoutine);
+	return WSASendOriginal(s, Buffers, dwBufferCount, lpNumberOfBytesSent, dwFlags, lpOverlapped, lpCompletionRoutine);
 }
 
 int __stdcall connectHook(SOCKET s, const struct sockaddr *name, int namelen)
 {
-	OnConnect(s, (sockaddr*) name, namelen);
+	OnConnect(s, name, namelen);
 
-	return connectOriginal(s, name, namelen);
+	return connectOriginal(s, &Address, namelen);
 }
 
 BOOL __stdcall ConnectExHook(SOCKET s, const struct sockaddr *name, int namelen, PVOID lpSendBuffer, DWORD dwSendDataLength, LPDWORD lpdwBytesSent, LPOVERLAPPED lpOverlapped)
 {
-	OnConnect(s, (sockaddr*) name, namelen);
+	OnConnect(s, name, namelen);
 
-	return ConnectExOriginal(s, name, namelen, lpSendBuffer, dwSendDataLength, lpdwBytesSent, lpOverlapped);
+	return ConnectExOriginal(s, &Address, namelen, lpSendBuffer, dwSendDataLength, lpdwBytesSent, lpOverlapped);
 }
 
 int __stdcall WSAIoctlHook(SOCKET s, DWORD dwIoControlCode, LPVOID lpvInBuffer, DWORD cbInBuffer, LPVOID lpvOutBuffer, DWORD cbOutBuffer, LPDWORD lpcbBytesReturned,
@@ -206,6 +218,13 @@ int __stdcall WSAIoctlHook(SOCKET s, DWORD dwIoControlCode, LPVOID lpvInBuffer, 
 
 static void Hook()
 {
+	int bufferCount = 100, bufferSize = 10240;
+
+	Buffers = (WSABUF*) malloc(sizeof(WSABUF) * bufferCount);
+
+	for (int i = 0; i < bufferCount; ++i)
+		Buffers[i].buf = (char*) malloc(bufferSize);
+
 	LogFile = fopen("nodevfeeLog.txt", "r");
 
 	if (LogFile)
