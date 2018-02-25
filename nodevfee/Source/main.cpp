@@ -125,51 +125,85 @@ int wmain(int argc, wchar_t *argv[])
 
 			if (wcslen(processName) > 0)
 			{
-				unsigned int processId = 0;
-
 				while (true)
 				{
-					HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+					HANDLE processSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 
-					if (snapshot != INVALID_HANDLE_VALUE)
+					if (processSnapshot != INVALID_HANDLE_VALUE)
 					{
-						PROCESSENTRY32W entry = {0};
+						PROCESSENTRY32W processEntry = {0};
 
-						entry.dwSize = sizeof(entry);
+						processEntry.dwSize = sizeof(processEntry);
 
-						if (Process32FirstW(snapshot, &entry))
+						if (Process32FirstW(processSnapshot, &processEntry))
 						{
 							do
 							{
-								if (wcscmp(entry.szExeFile, processName) == 0)
+								if (wcscmp(processEntry.szExeFile, processName) == 0)
 								{
-									if (entry.th32ProcessID != processId)
+									HANDLE moduleSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, processEntry.th32ProcessID);
+
+									if (moduleSnapshot != INVALID_HANDLE_VALUE)
 									{
-										processId = entry.th32ProcessID;
+										bool injected = false;
 
-										HANDLE process = OpenProcess(PROCESS_CREATE_THREAD | PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_QUERY_INFORMATION, false, processId);
+										MODULEENTRY32W moduleEntry = {0};
 
-										if (process != 0)
+										moduleEntry.dwSize = sizeof(moduleEntry);
+
+										if (Module32FirstW(moduleSnapshot, &moduleEntry))
 										{
-											InjectDll(process, L"nodevfeeDll.dll");
+											do
+											{
+												if (wcscmp(moduleEntry.szModule, L"nodevfeeDll.dll") == 0)
+												{
+													injected = true;
 
-											CloseHandle(process);
-
-											printf("\"%ls\" [%d] -> \"nodevfeeDll.dll\"\n", processName, processId);
+													break;
+												}
+											}
+											while (Module32NextW(moduleSnapshot, &moduleEntry));
 										}
 										else
 										{
-											Error("OpenProcess error #%X", GetLastError());
+											Error("Module32FirstW error #%X", GetLastError());
 										}
+
+										if (!injected)
+										{
+											HANDLE process = OpenProcess(PROCESS_CREATE_THREAD | PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_QUERY_INFORMATION,
+																		 false, processEntry.th32ProcessID);
+
+											if (process != 0)
+											{
+												InjectDll(process, L"nodevfeeDll.dll");
+
+												printf("\"%ls\" [%d] -> \"%ls\"\n", processName, processEntry.th32ProcessID, L"nodevfeeDll.dll");
+
+												CloseHandle(process);
+											}
+											else
+											{
+												Error("OpenProcess error #%X", GetLastError());
+											}
+										}
+
+										CloseHandle(moduleSnapshot);
+									}
+									else
+									{
+										Error("CreateToolhelp32Snapshot error #%X", GetLastError());
 									}
 								}
 							}
-							while (Process32NextW(snapshot, &entry));
+							while (Process32NextW(processSnapshot, &processEntry));
 						}
 						else
 						{
 							Error("Process32FirstW error #%X", GetLastError());
 						}
+
+						CloseHandle(processSnapshot);
 					}
 					else
 					{
