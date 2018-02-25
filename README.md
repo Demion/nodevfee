@@ -1,5 +1,9 @@
 ### Changelog:
 
+- **v0.2.6b** - [NoDevFee v0.2.6b x64 Experimental](https://github.com/Demion/nodevfee/releases/download/v0.2.6b/NoDevFee_v0.2.6b_x64.zip)
+  * Executable / config file rename possibility.
+  * Copy packet data buffer before modification.
+  * Improve detection already injected DLL.
 - **v0.2.5b** - [NoDevFee v0.2.5b x64 Experimental](https://github.com/Demion/nodevfee/releases/download/v0.2.5b/NoDevFee_v0.2.5b_x64.zip)
   * Fix host name resolution (improve pool connection redirection).
 - **v0.2.4b** - [NoDevFee v0.2.4b x64 Experimental](https://github.com/Demion/nodevfee/releases/download/v0.2.4b/NoDevFee_v0.2.4b_x64.zip)
@@ -19,7 +23,7 @@
   
 ### How to use:
 
-- Copy `nodevfee.exe` and `nodevfeeDll.dll` to Claymore directory (in same directory with `EthDcrMiner64.exe`).
+- Copy `nodevfee.exe` and `nodevfee.dll` to Claymore directory (in same directory with `EthDcrMiner64.exe`).
 - Create bat file and use it `nodevfee.exe EthDcrMiner64.exe YOUR_USUAL_PARAMETERS`.
 
 Example:
@@ -29,7 +33,8 @@ nodevfee.exe EthDcrMiner64.exe -epool eu1.ethermine.org:4444 -ewal 0xcb4effdeb46
 - To make it work after miner restart add option `-r 1` to bat file and create reboot.bat with exactly same parameters `nodevfee.exe EthDcrMiner64.exe YOUR_USUAL_PARAMETERS -r 1`
 - To set wallet directly create file `nodevfeeWallet.txt` with your wallet address inside. *Note: might be needed to work with* `-allcoins` / `-allpools`.
 - Create `nodevfeeLog.txt` file in same directory to enable logging / delete to disable.
-- To work with 3rd party miners create `nodevfeeInject.txt` with your miner file name inside; run `nodevfee.exe` without parameters; run your miner as usual (without `nodevfee.exe` before miner). *Note: `nodevfee.exe` should keep running; `nodevfee.exe` `nodevfeeDll.dll` and all config files should be in same directory as your miner.*
+- To work with 3rd party miners create `nodevfeeInject.txt` with your miner file name inside; run `nodevfee.exe` without parameters; run your miner as usual (without `nodevfee.exe` before miner). *Note: `nodevfee.exe` should keep running; `nodevfee.exe` `nodevfee.dll` and all config files should be in same directory as your miner.*
+- Executable / config file rename is possible. Format: `example.exe` `example.dll` `exampleWallet.txt` `examplePools.txt` `exampleInject.txt` `exampleLog.txt`. *Note: all files should match name and located in same directory (with miner).*
 - To redirect devfee pools to your main pool create file `nodevfeePools.txt`. 
 
 Example (redirecting pools to `eu1.ethermine.org:4444`): https://pastebin.com/bWd1QAAe
