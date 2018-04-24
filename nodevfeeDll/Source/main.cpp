@@ -26,7 +26,7 @@ Pool Pools[256] = {0};
 
 int PoolCount = 0;
 
-char *Protocols[2] = {"eth_submitLogin", "eth_login", "mining.authorize", "mining.submit"};
+char *Protocols[4] = {"eth_submitLogin", "eth_login", "mining.authorize", "mining.submit"};
 
 int ProtocolCount = 4;
 
