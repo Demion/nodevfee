@@ -26,9 +26,9 @@ Pool Pools[256] = {0};
 
 int PoolCount = 0;
 
-char *Protocols[2] = {"eth_submitLogin", "eth_login"};
+char *Protocols[4] = {"eth_submitLogin", "eth_login", "mining.authorize", "mining.submit"};
 
-int ProtocolCount = 2;
+int ProtocolCount = 4;
 
 int (__stdcall *sendOriginal)(SOCKET s, const char *buf, int len, int flags);
 int (__stdcall *WSASendOriginal)(SOCKET s, LPWSABUF lpBuffers, DWORD dwBufferCount,
