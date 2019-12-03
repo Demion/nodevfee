@@ -98,6 +98,8 @@ _No need to inject, no need any config files, can be located at any folder, just
 
 **_Project suspended (no plans to update)._**
 
+**Use gpu memory timings (straps) on any miner** - cmdrv64 Close Driver Handle - https://github.com/Demion/cmdrv64
+
 ### Donation:
 
 - ETH: 0xcb4effdeb46479caa0fef5f5e3569e4852f753a2
